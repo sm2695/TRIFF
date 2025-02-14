@@ -128,13 +128,13 @@ for (i in 1:nrow(gene_expression_info)) {
         }
         }
         # save the plot
-        ggsave(paste0("./Individual Gene Exp Plots/",gene, "_BrainSpan_Human.pdf"), plot = plot_expr(gene), width = 8, height = 7, dpi = 600)
+        ggsave(paste0("./results/Individual Gene Exp Plots/",gene, "_BrainSpan_Human.pdf"), plot = plot_expr(gene), width = 8, height = 7, dpi = 600)
         
 }
 
 # Print the gene expression information
 View(gene_expression_info)
 
-openxlsx::write.xlsx(gene_expression_info, "TRIFF_risk_gene_info.xlsx")
+openxlsx::write.xlsx(gene_expression_info, "./results/TRIFF_risk_gene_info.xlsx")
 
 
