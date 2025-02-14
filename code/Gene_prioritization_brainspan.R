@@ -84,6 +84,8 @@ datMeta <- datMeta[ind, ]
 disease_list1<- readRDS("/Volumes/projects/C3_Sellgren_lab/Lab Members/Susmita/Internal data/C1Q/data/Geneset_with_disease_riskgenes.rds")
 # Lets start with the latest SCZ gwas from 2022
 trubetskoy <- readRDS("/Volumes/projects/C3_Sellgren_lab/Lab Members/Susmita/Internal data/C1Q/Bipolar/Trubetskoy_scz_genes.rds")
+hic <- disease_list1$SCZ_HiC$`High-confident Hi-C defined Schizophrenia risk genes`
+schema <- c("SET1DA", "CUL1", "XPO7", "TRIO", "CACNA1G", "SP4", "GRIA3", "GRIN2A", "HERC1", "RB1CC1")
 
 # Create a data frame to store gene expression information
 gene_expression_info <- data.frame(
