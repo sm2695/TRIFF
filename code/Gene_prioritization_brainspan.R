@@ -5,6 +5,7 @@
 
 rm(list = ls())
 options(stringsAsFactors = FALSE)
+source(utility.R)
 
 suppressWarnings(suppressMessages(library(tidyverse)))
 suppressWarnings(suppressMessages(library(data.table)))
