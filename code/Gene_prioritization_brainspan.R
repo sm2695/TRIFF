@@ -2,10 +2,10 @@
 
 # First round of exploration will be done using the BrainSpan data - bulk RNA-seq data from the developing human brain
 
-
+source("R/utils.R")
 rm(list = ls())
 options(stringsAsFactors = FALSE)
-source(utility.R)
+
 
 suppressWarnings(suppressMessages(library(tidyverse)))
 suppressWarnings(suppressMessages(library(data.table)))
