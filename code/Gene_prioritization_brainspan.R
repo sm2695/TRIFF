@@ -1,4 +1,6 @@
-### TRIFF Project - Code to explore epression of genes in the brain ####
+#### TRIFF Project #####
+
+## Code to explore expression of genes in the brain (adapted from mmkim1210) ##
 
 # First round of exploration will be done using the BrainSpan data - bulk RNA-seq data from the developing human brain
 
