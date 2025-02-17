@@ -87,6 +87,20 @@ trubetskoy <- readRDS("/Volumes/projects/C3_Sellgren_lab/Lab Members/Susmita/Int
 hic <- disease_list1$SCZ_HiC$`High-confident Hi-C defined Schizophrenia risk genes`
 schema <- c("SET1DA", "CUL1", "XPO7", "TRIO", "CACNA1G", "SP4", "GRIA3", "GRIN2A", "HERC1", "RB1CC1")
 
+### According to our discussions, for the rest we basically go with every CNV with odds ratio > 5.0 from Owen et al., 2023. 
+#load all 127 cnvs
+all_cnv<- readRDS("/Volumes/projects/C3_Sellgren_lab/Lab Members/Susmita/Internal data/CNV/2023/Genes_with_CNV.rds")
+# this includes 22q11.2del, PWS/AS dup, 3q29 del, NRXN1 del, 16p11.2 dup and 1q21.1. del
+
+keep <- c("22q11.21_DUP/DEL","7q11.23_DUP/DEL", "3q29_DUP/DEL", "16p11.2_DUP/DEL-A","16p11.2_DUP/DEL-B" ,"1q21.1-q21.2_DUP/DEL")
+
+# Dont forget NRXN1
+
+cnvs <- list("22q11.2del" = c(), "PWS/ASdup" = c(), "3q29del"= c(), "NRXN1del"= c(), "16p11.2dup" =c(), "1q21.1del" = c())
+
+
+#### Begin Expression Exploration here ####
+
 # Create a data frame to store gene expression information
 gene_expression_info <- data.frame(
     Dataset = "BrainSpan",
