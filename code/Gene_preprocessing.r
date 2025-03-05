@@ -43,10 +43,8 @@ length(gwas_genes)
 #gwas_genes <- ifelse(grepl("\\.", gwas_genes), sub("\\..*", "", gwas_genes), gwas_genes)
 
 # Fix bad names
-
 gwas_genes[grepl("ago", gwas_genes)] <- c("AGO1", "AGO3", "AGO4")
-
-#gwas_genes[grepl("ENSG", gwas_genes)] ## Novel RNA genes. take care of these later after file generation
+#gwas_genes[grepl("ENSG", gwas_genes)] ## Novel RNA genes. take care of these later if they persist
 
 # Read the supp file https://doi.org/10.1016/j.schres.2019.03.007
 hic_data <- read.table("data/HiC_defined_SCZ_risk_genes_from_GWS.txt", header = TRUE, sep = "\t")
@@ -83,9 +81,7 @@ length(cnv_genes)
 ###### Get differentially expressed genes from Postmortem comparisons ######
 
 # Load the data from Batiuk et al.
-kkh_deg <- read.xlsx("data/Kostya_DEGenes.xlsx", sheet = 1)
-colnames(kkh_deg) <- kkh_deg[1,]
-kkh_deg <- kkh_deg[-1,]
+kkh_deg <- read.xlsx("data/Batiuk_DEGenes.xlsx", sheet = 1)
 kkh_deg$padj <- as.numeric(kkh_deg$padj)
 kkh_genes <- unique(kkh_deg$Gene[which(kkh_deg$padj < 0.05)])
 # Remove genes starting with "MT-" from kkh_genes
@@ -200,11 +196,14 @@ for (i in 1:nrow(all_genes)) {
 
 View(all_genes)
 
-
+# Create directory for BrainSpan if it doesn't exist
+if (!dir.exists("results")) {
+    dir.create("results", recursive = TRUE)
+}
+                       
 # Write the second-last gene list to a file
 all_genes[] <- lapply(all_genes, function(x) if (is.list(x)) sapply(x, toString) else x)
-write.xlsx(all_genes, "results/TRIFF_SCZ_curated_list_of_genes_temp.xlsx")
-
+write.xlsx(all_genes, "results/TRIFF_genes_unupdated_tmp.xlsx")
 
 ### Run the gene names against https://www.genenames.org/tools/multi-symbol-checker/ and add a column with approved HGNC symbols
 
