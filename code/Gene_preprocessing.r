@@ -1,67 +1,75 @@
 
+#### TRIFF Project #####
+# Code to curate all genes associated to the risk of developing schizophrenia. The following sources are considered:
+#A. common variants
+# 1. GWAS (Trubetskoy et al. 2021)
+# 2. HiC-defined SCZ risk genes from GWS (https://doi.org/10.1016/j.schres.2019.03.007)
+# 3. MPRA-HiC (https://doi.org/10.1016/j.xgen.2023.100404)
+#B. rare variants
+# 4. CNV
+# 5. SCHEMA (Singh et al. 2022)
+#C. differentially expressed genes from postmortem comparisons
+# 5. Postmortem-Batiuk
+# 6. Postmortem-Ruzicka
 
+source("R/utils.R")
+rm(list = ls())
+options(stringsAsFactors = FALSE)
 
 if (!requireNamespace("rentrez", quietly = TRUE)) install.packages("rentrez")
 if (!requireNamespace("XML", quietly = TRUE)) install.packages("XML")
 if (!requireNamespace("biomaRt", quietly = TRUE)) install.packages("biomaRt")
-# Load required libraries
+if (!requireNamespace("httr", quietly = TRUE)) install.packages("httr")
+if (!requireNamespace("jsonlite", quietly = TRUE)) install.packages("jsonlite")
+if (!requireNamespace("openxlsx", quietly = TRUE)) install.packages("openxlsx")
+if (!requireNamespace("readxl", quietly = TRUE)) install.packages("readxl")
+
+
+# Load the required libraries
+library(httr)
+library(jsonlite)
 library(rentrez)
 library(XML)
 library(readxl)
+library(openxlsx)
 library(biomaRt)
 
 #### Get Common variant genes from the latest GWAS #######
-gwas <- readxl::read_xls("/Volumes/projects/C3_Sellgren_lab/Lab Members/Susmita/Internal data/SCZ Meta-Analysis/TRIFF/data/Trubetskoy_Supplementary_Table_3.xls")
-
-#  Extract column with the 'SNP IDs'
-top_index <- gwas[[2]]
-
-# Fetching and Parsing SNP Data from NCBI's Entrez database
-snp_data <- entrez_fetch(db = "snp", id = top_index, rettype = "xml", parsed = FALSE)
-
-# Convert fetched data into an XML document
-xml_doc <- xmlParse(snp_data)  # Explicitly parse since parsed = FALSE
-
-# Define XML namespace for NCBI SNP records
-ns <- c(ns0 = "https://www.ncbi.nlm.nih.gov/SNP/docsum")
-
-# Extract gene names
-gwas_genes <- xpathSApply(xml_doc, "//ns0:GENE_E/ns0:NAME", xmlValue, namespaces = ns)
+gwas <- read.xlsx("data/Trubetskoy_SCZ_GWS.xlsx")
+gwas_genes <- unique(gwas$Symbol.ID[which(gwas$FINEMAPk3.5 == 1)]) ## FINEMAP credible SNPS fromTrubetskoy et al. 2021
 length(gwas_genes)
-#240
-
-## FINEMAP credible SNPS fromTrubetskoy et al. 2021
-trubetskoy <- readRDS("/Volumes/projects/C3_Sellgren_lab/Lab Members/Susmita/Internal data/C1Q/Bipolar/Trubetskoy_scz_genes.rds")
-gwas_genes <- unique(trubetskoy$all_scz_trubetskoy)
+#625
 
 #gwas_genes <- ifelse(grepl("\\.", gwas_genes), sub("\\..*", "", gwas_genes), gwas_genes)
 
 # Fix bad names
 
-gwas_genes[grepl("ago", gwas_genes)] <- c("AGO1", "AGO3","AGO4")
+gwas_genes[grepl("ago", gwas_genes)] <- c("AGO1", "AGO3", "AGO4")
 
-gwas_genes[grepl("ENSG", gwas_genes)] ## Novel RNA genes. take care of these later after file generation
+#gwas_genes[grepl("ENSG", gwas_genes)] ## Novel RNA genes. take care of these later after file generation
 
 # Read the supp file https://doi.org/10.1016/j.schres.2019.03.007
-hic_data <- read.table("/Volumes/projects/C3_Sellgren_lab/Lab Members/Susmita/Internal data/SCZ Meta-Analysis/TRIFF/data/HiC_defined_SCZ_risk_genes_from_GWS.txt", header = TRUE, sep = "\t")
+hic_data <- read.table("data/HiC_defined_SCZ_risk_genes_from_GWS.txt", header = TRUE, sep = "\t")
 
 # 
 # Assuming we need to extract a specific column, e.g., 'Gene'
 hic_genes <- unique(hic_data[[1]])
 length(hic_genes)
+#455
 
-mpra <- read.xlsx("/Volumes/projects/C3_Sellgren_lab/Lab Members/Susmita/Internal data/SCZ Meta-Analysis/TRIFF/data/MPRA-HiC_SCZ.xlsx")
-colnames(mpra) <- mpra[1,]
-mpra <- mpra[-1,]
+mpra <- read.xlsx("data/MPRA-HiC_SCZ.xlsx")
+colnames(mpra) <- mpra[1, ]
+mpra <- mpra[-1, ]
 mpra_genes <- unique(mpra$HGNC_symbol)
 length(mpra_genes)
-
+#272
 
 ###### Get rare variant genes ######
 
 schema <- c("SET1DA", "CUL1", "XPO7", "TRIO", "CACNA1G", "SP4", "GRIA3", "GRIN2A", "HERC1", "RB1CC1")
+length(schema)
 
-all_cnv<- readRDS("/Volumes/projects/C3_Sellgren_lab/Lab Members/Susmita/Internal data/CNV/2023/Genes_with_CNV.rds")
+all_cnv<- readRDS("data/Genes_with_CNV.rds")
 
 # include 22q11.2del, PWS/AS dup, 3q29 del, NRXN1 del(2p16.3), 16p11.2 dup, 1q21.1. del, WBS dup, 15q13.3del, 16p12.1del, 1q21.1dup, 16p13.11dup, and 15q11.2del
 
@@ -75,7 +83,7 @@ length(cnv_genes)
 ###### Get differentially expressed genes from Postmortem comparisons ######
 
 # Load the data from Batiuk et al.
-kkh_deg <- read.xlsx("/Volumes/projects/C3_Sellgren_lab/Lab Members/Susmita/Internal data/SCZ Meta-Analysis/TRIFF/data/Kostya_DEGenes.xlsx", sheet = 1)
+kkh_deg <- read.xlsx("data/Kostya_DEGenes.xlsx", sheet = 1)
 colnames(kkh_deg) <- kkh_deg[1,]
 kkh_deg <- kkh_deg[-1,]
 kkh_deg$padj <- as.numeric(kkh_deg$padj)
@@ -83,26 +91,27 @@ kkh_genes <- unique(kkh_deg$Gene[which(kkh_deg$padj < 0.05)])
 # Remove genes starting with "MT-" from kkh_genes
 kkh_genes <- kkh_genes[!grepl("^MT-", kkh_genes)]
 length(kkh_genes)
-
+#53
 
 # Load the data from Euzicka et al.
-ruz_deg <- read.xlsx("/Volumes/projects/C3_Sellgren_lab/Lab Members/Susmita/Internal data/SCZ Meta-Analysis/TRIFF/data/Ruzicka_DEGenes.xlsx", sheet = 1)
+ruz_deg <- read.xlsx("data/Ruzicka_DEGenes.xlsx", sheet = 1)
 ruz_deg$Meta_adj.P.Val <- as.numeric(ruz_deg$Meta_adj.P.Val)
 ruz_genes <- unique(ruz_deg$gene[which(ruz_deg$Meta_adj.P.Val < 0.05)])
 length(ruz_genes)
+#224
 
-
-# Combine all gene vectors into a single data frame
+######## Combine all gene vectors into a single data frame  ############
 all_genes <- data.frame(
-    Gene = c(gwas_genes, hic_genes,mpra_genes, cnv_genes, kkh_genes, ruz_genes),
-    Source = c(
-        rep("GWAS", length(gwas_genes)),
-        rep("HiC-defined", length(hic_genes)),
-        rep("MPRA-HiC", length(mpra_genes)),
-        rep("CNV", length(cnv_genes)),
-        rep("Postmortem-Batiuk", length(kkh_genes)),
-        rep("Postmortem-Ruzicka", length(ruz_genes))
-    )
+  Gene = c(gwas_genes, hic_genes,mpra_genes, cnv_genes, schema, kkh_genes, ruz_genes),
+  Source = c(
+    rep("GWAS", length(gwas_genes)),
+    rep("HiC-defined", length(hic_genes)),
+    rep("MPRA-HiC", length(mpra_genes)),
+    rep("CNV", length(cnv_genes)),
+    rep("SCHEMA" , length(schema)),
+    rep("Postmortem-Batiuk", length(kkh_genes)),
+    rep("Postmortem-Ruzicka", length(ruz_genes))
+  )
 )
 
 View(all_genes)
@@ -113,13 +122,13 @@ all_genes$Source<- ifelse(all_genes$Source == "CNV", paste0(all_genes$Source,"_"
 all_genes <- aggregate(Source ~ Gene, data = all_genes, FUN = function(x) paste(unique(x), collapse = ","))
 
 # Connect to Ensembl (Human & Mouse)
-ensembl_human <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
+ensembl_human <- useMart("ensembl", dataset = "hsapiens_gene_ensembl", host = "http://useast.ensembl.org/")
 ensembl_mouse <- useMart("ensembl", dataset = "mmusculus_gene_ensembl",host = "http://useast.ensembl.org/")
 
 # Function to fetch gene biotype information from Ensembl using biomaRt 
 get_gene_info <- function(gene_symbols) {
-    # STEP 1: Get Human Gene Data
-    human_attributes <- c("hgnc_symbol", "external_gene_name", "gene_biotype", "description", "ensembl_gene_id")  
+  # STEP 1: Get Human Gene Data
+  human_attributes <- c("hgnc_symbol", "external_gene_name", "gene_biotype", "description", "ensembl_gene_id")  
     human_data <- getBM(
         attributes = human_attributes, 
         filters = "hgnc_symbol", 
@@ -145,26 +154,14 @@ get_gene_info <- function(gene_symbols) {
 
 # Fetch gene biotype information and mouse homologs for all genes
 biotype_info <- get_gene_info(all_genes$Gene)
-View(biotype_info)
+#View(biotype_info)
 
 # Merge the biotype information with the all_genes data frame
 all_genes <- merge(all_genes, biotype_info, by.x = "Gene", by.y = "hgnc_symbol", all.x = TRUE)
 View(all_genes)
 
 
-
-
-
-
-
-if (!requireNamespace("httr", quietly = TRUE)) install.packages("httr")
-if (!requireNamespace("jsonlite", quietly = TRUE)) install.packages("jsonlite")
-
-# Load the required libraries
-library(httr)
-library(jsonlite)
-
-# Define the list of gene names
+# Define the list of odd gene names
 odd_gene_names <- all_genes[which(is.na(all_genes$external_gene_name)),1]
 
 # Function to query exphewas API for a single gene
@@ -189,7 +186,7 @@ odd_gene_data_list <- lapply(odd_gene_names, query_exphewas)
 # combine the list of results into a data frame
 odd_gene_data_df <- do.call(rbind, odd_gene_data_list)
 odd_gene_data_df <- as.data.frame(odd_gene_data_df)
-View(odd_gene_data_df)
+#View(odd_gene_data_df)
 
 # Match the names in all_genes$Gene with odd_gene_data_df$name and update gene_biotype and description
 for (i in 1:nrow(all_genes)) {
@@ -203,23 +200,19 @@ for (i in 1:nrow(all_genes)) {
 
 View(all_genes)
 
-# Fix some leftover gene names
-all_genes[grepl("ENSG", all_genes$Gene),6] <- all_genes[grepl("ENSG", all_genes$Gene),1]
-all_genes[grepl("ENSG", all_genes$Gene),3] <- c("", "RN7SL199P", "RN7SL656P", "RDM1P1", "")
-all_genes[grepl("ENSG", all_genes$Gene),1] <- c("ENSG0000026231","RN7SL199P","RN7SL656P", "RDM1P1","ENSG00000278770")
-
 
 # Write the second-last gene list to a file
-write.xlsx(all_genes, "/Volumes/projects/C3_Sellgren_lab/Lab Members/Susmita/Internal data/SCZ Meta-Analysis/TRIFF/results/TRIFF_SCZ_curated_list_of_genes_temp.xlsx", na = "")
+all_genes[] <- lapply(all_genes, function(x) if (is.list(x)) sapply(x, toString) else x)
+write.xlsx(all_genes, "results/TRIFF_SCZ_curated_list_of_genes_temp.xlsx")
 
 
-## Run the gene names against https://www.genenames.org/tools/multi-symbol-checker/ and add a column with approved HGNC symbols
+### Run the gene names against https://www.genenames.org/tools/multi-symbol-checker/ and add a column with approved HGNC symbols
 
+# Tried running it via httr here but the code fails consistently due the the website's API. 
+
+# Make sure to save the file as an xlsx file before reading the file in. csv files give an error
 # read in the results
-symbol_check <- read.xlsx("/Volumes/projects/C3_Sellgren_lab/Lab Members/Susmita/Internal data/SCZ Meta-Analysis/TRIFF/results/hgnc-symbol-check.xlsx")
-
-head(symbol_check)
-symbol_check <- symbol_check[-1,]
+symbol_check <- read.xlsx("results/hgnc-symbol-check.xlsx")
 
 # Merge the symbol_check data with all_genes
 all_genes2 <- merge(all_genes, symbol_check, by.x = "Gene", by.y = "Input", all.x = TRUE)
@@ -230,5 +223,12 @@ View(all_genes2)
 all_genes2[] <- lapply(all_genes2, function(x) if (is.list(x)) sapply(x, toString) else x)
 
 # Write the final gene list to a file
-na.string=""
-write.xlsx(all_genes2, file = "/Volumes/projects/C3_Sellgren_lab/Lab Members/Susmita/Internal data/SCZ Meta-Analysis/TRIFF/results/TRIFF_SCZ_curated_list_of_genes_updated.xlsx", row.names = FALSE, na = "")
+write.xlsx(all_genes2, file = "results/TRIFF_SCZ_curated_list_of_genes_updated.xlsx", row.names = FALSE, na = "")
+
+
+
+
+
+
+
+
