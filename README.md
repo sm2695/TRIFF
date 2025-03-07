@@ -28,7 +28,7 @@ Rscript code/Gene_prioritisation_sc.r
 Helper functions are stored in R/utils.R. 
 
 ## **Contribute**  
-To add/modify to the existing repository (if not main):  
+To add/modify to the existing repository:  
 1. Fork the repository.  
 2. Create a feature branch (`git checkout -b feature-name`).  
 3. Commit your changes (`git commit -m "Add feature"`).  
