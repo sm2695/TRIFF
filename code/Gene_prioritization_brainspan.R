@@ -9,6 +9,13 @@ rm(list = ls())
 options(stringsAsFactors = FALSE)
 
 
+if (!requireNamespace("tidyverse", quietly = TRUE)) install.packages("tidyverse")
+if (!requireNamespace("data.table", quietly = TRUE)) install.packages("data.table")
+if (!requireNamespace("cowplot", quietly = TRUE)) install.packages("cowplot")
+if (!requireNamespace("ggplot2", quietly = TRUE)) install.packages("ggplot2")
+if (!requireNamespace("readxl", quietly = TRUE)) install.packages("readxl")
+if (!requireNamespace("openxlsx", quietly = TRUE)) install.packages("openxlsx")
+if (!requireNamespace("parallel", quietly = TRUE)) install.packages("parallel")
 suppressWarnings(suppressMessages(library(tidyverse)))
 suppressWarnings(suppressMessages(library(data.table)))
 suppressWarnings(suppressMessages(library(cowplot)))
@@ -42,7 +49,7 @@ datMeta <- left_join(datMeta_sample, datMeta_subject, by = "Braincode")  # 607 s
 
 ## Subset data to include selected brain regions (mentioned in the project plan)
 # Check which regiona are included in the data
-table(datMeta$Regioncode)
+#table(datMeta$Regioncode)
 
 #   A1C    AMY    CBC    CGE    DFC    DTH    HIP    IPC    ITC    LGE    M1C 
 #    36     37     33      2     40      2     39     39     37      2     33 
@@ -86,12 +93,11 @@ datMeta <- datMeta[ind, ]
 
 
 ### Read in disease-risk genes ###
-
 gene_main_df <- read.xlsx("results/TRIFF_SCZ_curated_list_of_genes_updated.xlsx")
 
 #### Begin Expression Exploration here ####
 
-# Create a data frame to store gene expression information 
+#Create a data frame to store gene expression information 
 gene_expression_info <- gene_main_df %>% mutate(
     Dataset = "BrainSpan",
     BrainExpressed = NA,
@@ -102,15 +108,15 @@ gene_expression_info <- gene_main_df %>% mutate(
     Significance_Bestimate = NA,
     Human_Period_Enrichment = NA)
 
-# Create directory for individual gene expression plots if it doesn't exist
+#Create directory for individual gene expression plots if it doesn't exist
 if (!dir.exists("results/Individual Gene Exp Plots")) {
         dir.create("results/Individual Gene Exp Plots", recursive = TRUE)
     }
 
 
-n_cores <- 6
+n_cores <- 6 # update if running on the server
 
-# Populate the data frame with average expression values
+#Populate the data frame with average expression values
 for (i in seq_len(nrow(gene_expression_info))) {
     gene <- gene_expression_info$Gene[i]
     gene_expression_info$BrainExpressed[i] <- is_gene_expressed(gene)
@@ -129,8 +135,8 @@ for (i in seq_len(nrow(gene_expression_info))) {
 
         # Calculate p-value for prenatal/postnatal enrichment using linear models
         sig <- mclapply(gene, calculate_significance, mc.cores = n_cores)
-        gene_expression_info$Significance_Pval[i] <- sig[[1]]
-        gene_expression_info$Significance_Bestimate[i] <- sig[[2]]
+        gene_expression_info$Significance_Pval[i] <- sig[[1]]$p_value
+        gene_expression_info$Significance_Bestimate[i] <- sig[[1]]$effect_size
         if (gene_expression_info$Significance_Pval[i] < 0.05) {
             gene_expression_info$Human_Period_Enrichment[i] <- ifelse(gene_expression_info$Significance_Bestimate[i] < 0, "Prenatal", "Postnatal")
         } else {
@@ -142,8 +148,8 @@ for (i in seq_len(nrow(gene_expression_info))) {
         
 }
 
-# Print the gene expression information
-View(gene_expression_info)
+
+#View(gene_expression_info)
 
 
 # Identify genes in gene_main_df that are not in annot
@@ -154,7 +160,7 @@ View(gene_main_df[which(gene_main_df$Gene %in% missing_genes),])
 # check if the updated Approved symbols of these genes are present in annot
 missing_approved <- annot$gene[annot$gene %in% missing_df$Approved.symbol]
 missing_approved#
-#"RPS17"      "CEBPZOS"    "MIR124-2HG"
+#"ELN"      "CHD5"     "CHD6"     "MPHOSPH6" "GALNTL6"
 
 ## Fill in missing gene information for these 3 genes
 
@@ -179,6 +185,17 @@ for (gene in missing_approved) {
     }
 }
 
+# Check if any columns are a list in gene_expression_info otherwise it doesn't save it properly
+list_columns <- sapply(gene_expression_info, is.list)
+if (any(list_columns)) {
+    print("The following columns are lists:")
+    print(names(gene_expression_info)[list_columns])
+} else {
+    print("No columns are lists.")
+}
+
+gene_expression_info$Significance_Pval <- as.numeric(gene_expression_info$Significance_Pval)
+
 write.xlsx(gene_expression_info, "results/TRIFF_risk_gene_BrainSpan_info.xlsx")
 
 #gene_expression_info <- read.xlsx("results/TRIFF_risk_gene_BrainSpan_info.xlsx")
@@ -186,7 +203,7 @@ write.xlsx(gene_expression_info, "results/TRIFF_risk_gene_BrainSpan_info.xlsx")
 
 # Summarize and Plot the percentage of genes that are brain expressed
 
-# get some colors
+#get some colors
 pal <- c("#DFE1BC", "#90C6A7", "#3D646A", "#795862", 
              "#141313", "#E2E1E4", "#A49FB8", "#6A83A9") 
 pal2 <- c("#A6A6A6", "#CDAA7D", "#EEE685", "#FFBBFF", "#D1EEEE", "#6495ED", "#6959CD")
@@ -199,7 +216,7 @@ brain_expressed_summary <- gene_expression_info %>%
     summarise(Count = n()) %>%
     mutate(Percentage = Count / sum(Count) * 100)
 
-# Plot pie chart for brain expressed genes
+#Plot pie chart for brain expressed genes
 brain_expressed_pie <- ggplot(brain_expressed_summary, aes(x = "", y = Percentage, fill = BrainExpressed)) +
     geom_bar(stat = "identity", width = 1) +
     coord_polar("y", start = 0) +
@@ -208,14 +225,14 @@ brain_expressed_pie <- ggplot(brain_expressed_summary, aes(x = "", y = Percentag
     geom_text(aes(label = paste0(round(Percentage, 1), "%")), position = position_stack(vjust = 0.5)) +
     labs(title = "Percentage of Genes that are Brain Expressed")
 
-# Summarize the human period enrichment for brain expressed genes
+#Summarize the human period enrichment for brain expressed genes
 enrichment_summary <- gene_expression_info %>%
     filter(BrainExpressed == TRUE) %>%
     group_by(Human_Period_Enrichment) %>%
     summarise(Count = n()) %>%
     mutate(Percentage = Count / sum(Count) * 100)
 
-# Plot pie chart for human period enrichment
+#Plot pie chart for human period enrichment
 enrichment_pie <- ggplot(enrichment_summary, aes(x = "", y = Percentage, fill = Human_Period_Enrichment)) +
     geom_bar(stat = "identity", width = 1) +
     coord_polar("y", start = 0) +
@@ -227,3 +244,8 @@ enrichment_pie <- ggplot(enrichment_summary, aes(x = "", y = Percentage, fill = 
 cowplot::plot_grid(brain_expressed_pie, enrichment_pie, nrow = 1)
 ggsave("results/Summary_BrainSpan_results.pdf", width = 10, height = 5, dpi = 600)
 
+
+
+#Remove temporary files from results directory
+files_to_remove <- c("results/TRIFF_genes_unupdated_tmp.xlsx", "results/hgnc-symbol-check.csv", "results/hgnc-symbol-check.xlsx" )
+file.remove(files_to_remove)

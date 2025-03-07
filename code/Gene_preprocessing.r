@@ -35,7 +35,7 @@ library(openxlsx)
 library(biomaRt)
 
 #### Get Common variant genes from the latest GWAS #######
-gwas <- read.xlsx("data/Trubetskoy_SCZ_GWS.xlsx")
+gwas <- read.xlsx("data/Trubetskoy_SCZ_GWAS.xlsx")
 gwas_genes <- unique(gwas$Symbol.ID[which(gwas$FINEMAPk3.5 == 1)]) ## FINEMAP credible SNPS fromTrubetskoy et al. 2021
 length(gwas_genes)
 #625
@@ -66,6 +66,7 @@ length(mpra_genes)
 
 schema <- c("SET1DA", "CUL1", "XPO7", "TRIO", "CACNA1G", "SP4", "GRIA3", "GRIN2A", "HERC1", "RB1CC1")
 length(schema)
+#10
 
 all_cnv<- readRDS("data/Genes_with_CNV.rds")
 
@@ -96,9 +97,15 @@ ruz_genes <- unique(ruz_deg$gene[which(ruz_deg$Meta_adj.P.Val < 0.05)])
 length(ruz_genes)
 #224
 
+# Load selected genes from the twins organoid scz study
+twins_genes <- read.xlsx("data/Sellgren_dev_PDEgenes.xlsx")
+twins_genes <- unique(twins_genes$Gene)
+length(twins_genes)
+#168
+
 ######## Combine all gene vectors into a single data frame  ############
 all_genes <- data.frame(
-  Gene = c(gwas_genes, hic_genes,mpra_genes, cnv_genes, schema, kkh_genes, ruz_genes),
+  Gene = c(gwas_genes, hic_genes,mpra_genes, cnv_genes, schema, kkh_genes, ruz_genes, twins_genes),
   Source = c(
     rep("GWAS", length(gwas_genes)),
     rep("HiC-defined", length(hic_genes)),
@@ -106,11 +113,12 @@ all_genes <- data.frame(
     rep("CNV", length(cnv_genes)),
     rep("SCHEMA" , length(schema)),
     rep("Postmortem-Batiuk", length(kkh_genes)),
-    rep("Postmortem-Ruzicka", length(ruz_genes))
+    rep("Postmortem-Ruzicka", length(ruz_genes)),
+    rep("Dev-Organoid", length(twins_genes))
   )
 )
 
-View(all_genes)
+#View(all_genes)
 # Update the Source column to include CNV information
 all_genes$Source<- ifelse(all_genes$Source == "CNV", paste0(all_genes$Source,"_", all_cnv$CNV[match(all_genes$Gene, all_cnv[[1]])]), all_genes$Source)
     
@@ -118,35 +126,9 @@ all_genes$Source<- ifelse(all_genes$Source == "CNV", paste0(all_genes$Source,"_"
 all_genes <- aggregate(Source ~ Gene, data = all_genes, FUN = function(x) paste(unique(x), collapse = ","))
 
 # Connect to Ensembl (Human & Mouse)
-ensembl_human <- useMart("ensembl", dataset = "hsapiens_gene_ensembl", host = "http://useast.ensembl.org/")
-ensembl_mouse <- useMart("ensembl", dataset = "mmusculus_gene_ensembl",host = "http://useast.ensembl.org/")
+ensembl_human <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")#, host = "http://useast.ensembl.org/")
+ensembl_mouse <- useMart("ensembl", dataset = "mmusculus_gene_ensembl")#,host = "http://useast.ensembl.org/")
 
-# Function to fetch gene biotype information from Ensembl using biomaRt 
-get_gene_info <- function(gene_symbols) {
-  # STEP 1: Get Human Gene Data
-  human_attributes <- c("hgnc_symbol", "external_gene_name", "gene_biotype", "description", "ensembl_gene_id")  
-    human_data <- getBM(
-        attributes = human_attributes, 
-        filters = "hgnc_symbol", 
-        values = gene_symbols, 
-        mart = ensembl_human
-    )
-    
-    # STEP 2: Get Mouse Homologs using the Mouse Dataset
-    mouse_attributes <- c("external_gene_name", "hsapiens_homolog_associated_gene_name")
-    mouse_homologs <- getBM(
-        attributes = mouse_attributes, 
-        mart = ensembl_mouse
-    )
-    
-    # Rename for merging
-    colnames(mouse_homologs) <- c("mouse_gene_name", "hgnc_symbol")
-    
-    # STEP 3: Merge Human Data with Mouse Homologs
-    final_data <- merge(human_data, mouse_homologs, by = "hgnc_symbol", all.x = TRUE)
-    
-    return(final_data)
-}
 
 # Fetch gene biotype information and mouse homologs for all genes
 biotype_info <- get_gene_info(all_genes$Gene)
@@ -154,32 +136,14 @@ biotype_info <- get_gene_info(all_genes$Gene)
 
 # Merge the biotype information with the all_genes data frame
 all_genes <- merge(all_genes, biotype_info, by.x = "Gene", by.y = "hgnc_symbol", all.x = TRUE)
-View(all_genes)
+#View(all_genes)
 
 
-# Define the list of odd gene names
+#Define the list of odd gene names
 odd_gene_names <- all_genes[which(is.na(all_genes$external_gene_name)),1]
-
-# Function to query exphewas API for a single gene
-query_exphewas <- function(gene_name) {
-  url <- paste0("https://exphewas.statgen.org/v1/api/gene/name/", gene_name)
-  response <- GET(url)  # Send GET request to the API
-  
-  # Check if the request was successful
-  if (status_code(response) == 200) {
-    content_data <- content(response, "text", encoding = "UTF-8")
-    parsed_data <- fromJSON(content_data, flatten = TRUE)
-    return(parsed_data)
-  } else {
-    warning(paste("Failed to fetch data for gene:", gene_name))
-    return(NULL)
-  }
-}
-
-# Query for all genes and store the results
+#Query for all genes and store the results
 odd_gene_data_list <- lapply(odd_gene_names, query_exphewas)
-
-# combine the list of results into a data frame
+#combine the list of results into a data frame
 odd_gene_data_df <- do.call(rbind, odd_gene_data_list)
 odd_gene_data_df <- as.data.frame(odd_gene_data_df)
 #View(odd_gene_data_df)
@@ -194,7 +158,7 @@ for (i in 1:nrow(all_genes)) {
     }
 }
 
-View(all_genes)
+#View(all_genes)
 
 # Create directory for BrainSpan if it doesn't exist
 if (!dir.exists("results")) {
@@ -205,29 +169,22 @@ if (!dir.exists("results")) {
 all_genes[] <- lapply(all_genes, function(x) if (is.list(x)) sapply(x, toString) else x)
 write.xlsx(all_genes, "results/TRIFF_genes_unupdated_tmp.xlsx")
 
-### Run the gene names against https://www.genenames.org/tools/multi-symbol-checker/ and add a column with approved HGNC symbols
+### Run the gene names manually against https://www.genenames.org/tools/multi-symbol-checker/ and add a column with approved HGNC symbols
 
 # Tried running it via httr here but the code fails consistently due the the website's API. 
 
 # Make sure to save the file as an xlsx file before reading the file in. csv files give an error
+
 # read in the results
 symbol_check <- read.xlsx("results/hgnc-symbol-check.xlsx")
 
 # Merge the symbol_check data with all_genes
 all_genes2 <- merge(all_genes, symbol_check, by.x = "Gene", by.y = "Input", all.x = TRUE)
-View(all_genes2)
-
+#View(all_genes2)
 
 # Convert list columns to character
 all_genes2[] <- lapply(all_genes2, function(x) if (is.list(x)) sapply(x, toString) else x)
 
 # Write the final gene list to a file
 write.xlsx(all_genes2, file = "results/TRIFF_SCZ_curated_list_of_genes_updated.xlsx", row.names = FALSE, na = "")
-
-
-
-
-
-
-
 
