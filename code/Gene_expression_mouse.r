@@ -1,13 +1,45 @@
 ### Still working on this 
 
-library(Seurat)
-library(SeuratExtend)
+# Load the required libraries
+suppressWarnings(suppressMessages(library(Seurat)))
+suppressWarnings(suppressMessages(library(SeuratExtend)))
 suppressWarnings(suppressMessages(library(openxlsx)))
 suppressWarnings(suppressMessages(library(ggplot2)))
 suppressWarnings(suppressMessages(library(reshape2)))
 suppressWarnings(suppressMessages(library(viridis)))
 suppressWarnings(suppressMessages(library(dplyr)))
 suppressWarnings(suppressMessages(library(magrittr)))
+suppressWarnings(suppressMessages(library(clusterProfiler)))
+suppressWarnings(suppressMessages(library(org.Hs.eg.db)))
+suppressWarnings(suppressMessages(library(parallel))
+
+source('R/utils.R')
+
+# Load the latest results file
+genes <- read.xlsx("/Volumes/projects/C3_Sellgren_lab/Lab Members/Susmita/Internal data/SCZ Meta-Analysis_triff/TRIFF_main/results/TRIFF_risk_genes_info.xlsx")
+
+## Add function/roles of each gene to help selection of genes by adding top GO terms to the genes dataframe
+                 
+genes$TopGO_BP <- NA
+genes$TopGO_CC <- NA
+genes$TopGO_MF <- NA
+
+# Extract top GO terms for every gene in the dataframe. Use mclapply to parallelize the process. Takes a long time to run
+go_terms_list <- mclapply(genes$Approved.symbol, function(symbol) {
+    if (!is.na(symbol)) {
+        get_top_go_terms(symbol)
+    } else {
+        list(BP = NA, CC = NA, MF = NA)
+    }
+}, mc.cores = detectCores() - 1)
+
+# Extract the results and assign them to the genes dataframe
+genes$TopGO_BP <- sapply(go_terms_list, function(x) x$BP)
+genes$TopGO_CC <- sapply(go_terms_list, function(x) x$CC)
+genes$TopGO_MF <- sapply(go_terms_list, function(x) x$MF)
+
+write.xlsx(genes, "/Volumes/projects/C3_Sellgren_lab/Lab Members/Susmita/Internal data/SCZ Meta-Analysis_triff/TRIFF_main/results/TRIFF_risk_genes_info_with_GO.xlsx")
+
 
 # Load the Linnarsson dataset
 lin <- readRDS("/Volumes/projects/C3_Sellgren_lab/Lab Members/Susmita/External datasets/Single Cell Studies/Mouse datasets/Linnarsson_mousedev.rds")
@@ -21,7 +53,6 @@ tab <- AggregateExpression(lin, group.by = c("Region","Class"))$RNA
 
 tab[1:5,1:5]
 
-genes <- read.xlsx("/Volumes/projects/C3_Sellgren_lab/Lab Members/Susmita/Internal data/SCZ Meta-Analysis/TRIFF/results/TRIFF_SCZ_curated_list_of_genes_updated.xlsx")
 
 filtered_tab <- tab[rownames(tab) %in% genes$mouse_gene_name, ]
 filtered_tab[1:5, 1:5]
@@ -49,3 +80,4 @@ for(i in seq_len(nrow(genes))){
 }
 View(genes)
 
+write.xlsx(genes, "/Volumes/projects/C3_Sellgren_lab/Lab Members/Susmita/Internal data/SCZ Meta-Analysis_triff/TRIFF_main/results/TRIFF_risk_genes_info_with_mouse_expression.xlsx")
