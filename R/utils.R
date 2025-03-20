@@ -168,3 +168,39 @@ query_exphewas <- function(gene_name) {
 }
 
 
+#' Function to get top GO terms for each gene
+#'
+#' This function extracts the GO:BP, GO:CC and GO:MF terms for a given gene.
+#'
+#' @param gene_name A character string specifying the gene name.
+#' @return A list containing top GO terms, or NULL if the request fails.
+#' @examples
+#' get_top_go_terms("TP53")
+#'
+#' @import clusterProfiler
+#' @import org.Hs.eg.db
+#' @export
+get_top_go_terms <- function(gene_name) {
+    tryCatch({
+        # Convert gene name to Entrez ID
+        entrez_id <- bitr(gene_name, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = org.Hs.eg.db)$ENTREZID
+        if (length(entrez_id) == 0) return(list(BP = NA, CC = NA))
+        
+        # Perform GO enrichment analysis for Biological Process (BP)
+        go_bp <- enrichGO(entrez_id, OrgDb = org.Hs.eg.db, ont = "BP", readable = TRUE)
+        top_bp <- if (!is.null(go_bp)) paste(head(paste(go_bp@result$ID, go_bp@result$Description, sep = ": "), 10), collapse = "; ") else NA
+        
+        # Perform GO enrichment analysis for Cellular Component (CC)
+        go_cc <- enrichGO(entrez_id, OrgDb = org.Hs.eg.db, ont = "CC", readable = TRUE)
+        top_cc <- if (!is.null(go_cc)) paste(head(paste(go_cc@result$ID, go_cc@result$Description, sep = ": "), 3), collapse = "; ") else NA
+
+        # Perform GO enrichment analysis for Molecular Function (MF)
+        go_mf <- enrichGO(entrez_id, OrgDb = org.Hs.eg.db, ont = "MF", readable = TRUE)
+        top_mf <- if (!is.null(go_mf)) paste(head(paste(go_mf@result$ID, go_mf@result$Description, sep = ": "), 3), collapse = "; ") else NA
+        
+        return(list(BP = top_bp, CC = top_cc, MF=top_mf))
+    }, error = function(e) {
+        return(list(BP = NA, CC = NA, MF = NA))
+    })
+}
+
