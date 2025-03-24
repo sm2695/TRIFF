@@ -16,7 +16,7 @@ suppressWarnings(suppressMessages(library(parallel)))
 source('R/utils.R')
 
 # Load the latest results file
-genes <- read.xlsx("/Volumes/projects/C3_Sellgren_lab/Lab Members/Susmita/Internal data/SCZ Meta-Analysis_triff/TRIFF_main/results/TRIFF_risk_genes_info.xlsx")
+genes <- read.xlsx("results/TRIFF_risk_genes_info.xlsx")
 
 ## Add function/roles of each gene to help selection of genes by adding top GO terms to the genes dataframe
                  
@@ -38,46 +38,30 @@ genes$TopGO_BP <- sapply(go_terms_list, function(x) x$BP)
 genes$TopGO_CC <- sapply(go_terms_list, function(x) x$CC)
 genes$TopGO_MF <- sapply(go_terms_list, function(x) x$MF)
 
-write.xlsx(genes, "/Volumes/projects/C3_Sellgren_lab/Lab Members/Susmita/Internal data/SCZ Meta-Analysis_triff/TRIFF_main/results/TRIFF_risk_genes_info_with_GO.xlsx")
+write.xlsx(genes, "results/TRIFF_risk_genes_info_with_GO.xlsx")
 
-
+                         
 # Load the Linnarsson dataset
-lin <- readRDS("/Volumes/projects/C3_Sellgren_lab/Lab Members/Susmita/External datasets/Single Cell Studies/Mouse datasets/Linnarsson_mousedev.rds")
-lin
+lin <- get_ucsc_reference(cb_url = "https://cells.ucsc.edu/?ds=mouse-dev-brain",cluster_col = "Class",if_log = FALSE)
+rownames(lin) = gsub(".+[|]", "", rownames(lin))
 
-# Check if genes$mouse_gene_name is expressed in lin and add the colnames from tab if expression is > 0.1
-genes_expressed <- genes$mouse_gene_name[genes$mouse_gene_name %in% rownames(tab)[rowSums(tab > 0.1) > 0]]
-colnames_expressed <- colnames(tab)[apply(tab[genes_expressed, ], 2, function(x) any(x > 0.1))]
-
-tab <- AggregateExpression(lin, group.by = c("Region","Class"))$RNA
-
-tab[1:5,1:5]
-
-
-filtered_tab <- tab[rownames(tab) %in% genes$mouse_gene_name, ]
-filtered_tab[1:5, 1:5]
-
-names_to_df <- colnames(filtered_tab)
-
-names_df <- data.frame(
-    region = sapply(strsplit(names_to_df, "_"), `[`, 1),
-    celltype = sapply(strsplit(names_to_df, "_"), `[`, 2)
-)
-
-head(names_df)
-names_df$region <- gsub("b|'","", names_df$region)
-colnames(tab) <- paste(names_df$region, names_df$celltype, sep = "_")
-
+# Check if genes$mouse_gene_name is expressed in any of the celltypes and add the cell types if expression is > 0.001
 genes$MouseBrainExpressed <- NA
 genes$MouseCTExpressed <- NA
-for(i in seq_len(nrow(genes))){
-    if(genes$mouse_gene_name[i] %in% rownames(filtered_tab)){
-        genes$MouseBrainExpressed[i] <- TRUE
-        if(genes$MouseBrainExpressed[i]){
-            genes$MouseCTExpressed[i] <- paste(colnames(filtered_tab)[filtered_tab[genes$mouse_gene_name[i], ] > 0.1], collapse = ";")
+
+for (i in seq_len(nrow(genes))) {
+    if (genes$mouse_gene_name[i] %in% rownames(lin)) {
+        gene_expression <- lin[genes$mouse_gene_name[i], ]
+        if (any(gene_expression > 0.001)) {
+            genes$MouseBrainExpressed[i] <- TRUE
+            genes$MouseCTExpressed[i] <- paste(colnames(lin)[gene_expression > 0.001], collapse = ";")
+        } else {
+            genes$MouseBrainExpressed[i] <- FALSE
         }
+    } else {
+        genes$MouseBrainExpressed[i] <- FALSE
     }
 }
-View(genes)
 
-write.xlsx(genes, "/Volumes/projects/C3_Sellgren_lab/Lab Members/Susmita/Internal data/SCZ Meta-Analysis_triff/TRIFF_main/results/TRIFF_risk_genes_info_with_mouse_expression.xlsx")
+# Write the results to a file
+write.xlsx(genes, "results/TRIFF_risk_genes_info_with_Ms_Ontologies.xlsx")
