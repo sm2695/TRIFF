@@ -10,10 +10,11 @@ for (pkg in required_packages) {
         install.packages(pkg, dependencies = TRUE)
     }
 }
-Biocmanager::install("clusterProfiler")
-BiocManager::install("org.Hs.eg.db")
-remotes::install_github("rnabioco/clustifyR")
-remotes::install_github("huayc09/SeuratExtend")
+
+if (!requireNamespace("clusterProfiler", quietly = TRUE)) {Biocmanager::install("clusterProfiler") }
+if (!requireNamespace("org.Hs.eg.db", quietly = TRUE)) {Biocmanager::install("org.Hs.eg.db") }
+if (!requireNamespace("clustifyr", quietly = TRUE)) {remotes::install_github("rnabioco/clustifyR") }
+
 
 # Load the libraries
 suppressWarnings(suppressMessages(library(Seurat)))
