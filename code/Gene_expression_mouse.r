@@ -79,3 +79,27 @@ for (i in seq_len(nrow(genes))) {
 
 # Write the results to a file
 write.xlsx(genes, "results/TRIFF_risk_genes_info_with_Ms_and_Ontologies.xlsx")
+
+
+
+# Count how many genes are BrainExpressed == TRUE, MouseBrainExpressed == TRUE, 
+# and are either prenatal or postnatal enriched in genes$Human_Period_Enrichment
+count_prenatal_enriched <- sum(genes$BrainExpressed == TRUE & 
+                               genes$MouseBrainExpressed == TRUE & 
+                               grepl("prenatal", genes$Human_Period_Enrichment, ignore.case = TRUE) & 
+                               genes$MouseBrainExpressed == TRUE, na.rm = TRUE)
+#556
+count_postnatal_enriched <- sum(genes$BrainExpressed == TRUE & 
+                                genes$MouseBrainExpressed == TRUE & 
+                                grepl("postnatal", genes$Human_Period_Enrichment, ignore.case = TRUE) & 
+                                genes$MouseBrainExpressed == TRUE, na.rm = TRUE)
+#596
+
+count_brain_expressed <- sum(genes$BrainExpressed == TRUE & genes$MouseBrainExpressed == TRUE, na.rm = TRUE) 
+#1239
+
+count_brain_not_mouse <- sum(genes$BrainExpressed == TRUE & genes$MouseBrainExpressed == FALSE, na.rm = TRUE)
+#188
+
+sum(genes$BrainExpressed == FALSE & genes$MouseBrainExpressed == TRUE, na.rm = TRUE)
+#178
