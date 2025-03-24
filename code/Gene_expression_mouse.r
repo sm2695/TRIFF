@@ -31,7 +31,7 @@ go_terms_list <- mclapply(genes$Approved.symbol, function(symbol) {
     } else {
         list(BP = NA, CC = NA, MF = NA)
     }
-}, mc.cores = detectCores() - 1) # run on ther server with >500gb RAM for some reason. 
+}, mc.cores = detectCores() - 1) # ran this on the server with 256 cores; needs >500gb RAM for some reason. 
 
 # Extract the results and assign them to the genes dataframe
 genes$TopGO_BP <- sapply(go_terms_list, function(x) x$BP)
