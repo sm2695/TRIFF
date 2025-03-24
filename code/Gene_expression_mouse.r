@@ -1,6 +1,21 @@
-### Still working on this 
+### Check expression in mouse brain tissue and get gene ontologies for each gene ###
 
 # Load the required libraries
+required_packages <- c("openxlsx", "ggplot2", "reshape2", 
+                       "viridis", "dplyr", "magrittr", "parallel")
+
+# Install missing packages
+for (pkg in required_packages) {
+    if (!requireNamespace(pkg, quietly = TRUE)) {
+        install.packages(pkg, dependencies = TRUE)
+    }
+}
+Biocmanager::install("clusterProfiler")
+BiocManager::install("org.Hs.eg.db")
+remotes::install_github("rnabioco/clustifyR")
+remotes::install_github("huayc09/SeuratExtend")
+
+# Load the libraries
 suppressWarnings(suppressMessages(library(Seurat)))
 suppressWarnings(suppressMessages(library(SeuratExtend)))
 suppressWarnings(suppressMessages(library(openxlsx)))
@@ -10,6 +25,7 @@ suppressWarnings(suppressMessages(library(viridis)))
 suppressWarnings(suppressMessages(library(dplyr)))
 suppressWarnings(suppressMessages(library(magrittr)))
 suppressWarnings(suppressMessages(library(clusterProfiler)))
+suppressWarnings(suppressMessages(library(clustifyR)))
 suppressWarnings(suppressMessages(library(org.Hs.eg.db)))
 suppressWarnings(suppressMessages(library(parallel)))
 
@@ -38,7 +54,7 @@ genes$TopGO_BP <- sapply(go_terms_list, function(x) x$BP)
 genes$TopGO_CC <- sapply(go_terms_list, function(x) x$CC)
 genes$TopGO_MF <- sapply(go_terms_list, function(x) x$MF)
 
-write.xlsx(genes, "results/TRIFF_risk_genes_info_with_GO.xlsx")
+#write.xlsx(genes, "results/TRIFF_risk_genes_info_with_GO.xlsx")
 
                          
 # Load the Linnarsson dataset
@@ -64,4 +80,4 @@ for (i in seq_len(nrow(genes))) {
 }
 
 # Write the results to a file
-write.xlsx(genes, "results/TRIFF_risk_genes_info_with_Ms_Ontologies.xlsx")
+write.xlsx(genes, "results/TRIFF_risk_genes_info_with_Ms_and_Ontologies.xlsx")
