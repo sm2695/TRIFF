@@ -11,7 +11,7 @@ suppressWarnings(suppressMessages(library(dplyr)))
 suppressWarnings(suppressMessages(library(magrittr)))
 suppressWarnings(suppressMessages(library(clusterProfiler)))
 suppressWarnings(suppressMessages(library(org.Hs.eg.db)))
-suppressWarnings(suppressMessages(library(parallel))
+suppressWarnings(suppressMessages(library(parallel)))
 
 source('R/utils.R')
 
@@ -31,7 +31,7 @@ go_terms_list <- mclapply(genes$Approved.symbol, function(symbol) {
     } else {
         list(BP = NA, CC = NA, MF = NA)
     }
-}, mc.cores = detectCores() - 1)
+}, mc.cores = detectCores() - 1) # run on ther server with >500gb RAM for some reason. 
 
 # Extract the results and assign them to the genes dataframe
 genes$TopGO_BP <- sapply(go_terms_list, function(x) x$BP)
