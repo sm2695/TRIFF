@@ -1,8 +1,8 @@
 ### Check expression in mouse brain tissue and get gene ontologies for each gene ###
 
 # Load the required libraries
-required_packages <- c("openxlsx", "ggplot2", "reshape2", 
-                       "viridis", "dplyr", "magrittr", "parallel")
+required_packages <- c("openxlsx",  "reshape2", 
+                       "dplyr", "magrittr", "parallel")
 
 # Install missing packages
 for (pkg in required_packages) {
@@ -17,12 +17,9 @@ if (!requireNamespace("clustifyr", quietly = TRUE)) {remotes::install_github("rn
 
 
 # Load the libraries
-suppressWarnings(suppressMessages(library(Seurat)))
-suppressWarnings(suppressMessages(library(SeuratExtend)))
+
 suppressWarnings(suppressMessages(library(openxlsx)))
-suppressWarnings(suppressMessages(library(ggplot2)))
 suppressWarnings(suppressMessages(library(reshape2)))
-suppressWarnings(suppressMessages(library(viridis)))
 suppressWarnings(suppressMessages(library(dplyr)))
 suppressWarnings(suppressMessages(library(magrittr)))
 suppressWarnings(suppressMessages(library(clusterProfiler)))
